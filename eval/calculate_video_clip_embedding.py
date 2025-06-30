@@ -18,7 +18,6 @@ from tqdm import tqdm
 
 import math
 import argparse
-from utils import read_jsonl
 import subprocess
 import datetime
 import multiprocessing
@@ -150,11 +149,8 @@ if __name__=="__main__":
 
     retriever = Retrieval_Manager(args=args, clip_save_folder=f'{args.dataset_folder}/{args.dataset}/clips/{args.clip_duration}',clip_duration=args.clip_duration)
     retriever.load_model_to_gpu()
-    try:
-        data_li = json.load(open(f'{args.dataset_folder}/{args.dataset}/qa{args.dataset_mode}.json'))
-    except:
-        data_li = read_jsonl(f'{args.dataset_folder}/{args.dataset}/qa{args.dataset_mode}.jsonl')
-
+    data_li = json.load(open(f'{args.dataset_folder}/{args.dataset}/qa{args.dataset_mode}.json'))
+    
     video_li = sorted(list(set([dic['video_path'] for dic in data_li])))
 
     print(f'{args.dataset_folder}/{args.dataset}/qa{args.dataset_mode}.json', len(data_li),len(video_li))
