@@ -1,9 +1,9 @@
 import sys
+import os
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-
 from retriever import Retrieval_Manager
-import os
+
 from languagebind import LanguageBind, to_device, transform_dict, LanguageBindImageTokenizer, LanguageBindVideoTokenizer
 import torch
 import numpy as np
