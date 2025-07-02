@@ -36,7 +36,7 @@ class Retrieval_Manager():
             'image': 'LanguageBind/LanguageBind_Image'
         }
 
-        self.model = LanguageBind(clip_type=clip_type, cache_dir='.')
+        self.model = LanguageBind(clip_type=clip_type, cache_dir='/share/huaying/long_video/code/long_video_rag/cache_dir')
 
         self.text_retriever = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True) # Setting use_fp16 to True speeds up computation with a slight performance degradation
 
@@ -101,31 +101,20 @@ class Retrieval_Manager():
             total_video_clip_paths.append(clip_save_folder+'/'+output_filename)     
 
         if os.path.exists(clip_save_folder):
-            retry = 0
-            while retry < 2:
-                valid_clip_num = 0
-                for clip_name in os.listdir(clip_save_folder):
-                    try:
-                        VideoReader(clip_save_folder+'/'+clip_name, ctx=cpu(0), num_threads=1)
-                        valid_clip_paths.add(clip_save_folder+'/'+clip_name)
-                        valid_clip_num+=1
-                        del total_video_clip_paths[total_video_clip_paths.index(clip_save_folder+'/'+clip_name)]
-                    except Exception as e:
-                        pass
-                        
-                if valid_clip_num >= (2*chunk_number//3): 
-                    return [file for file in sorted(valid_clip_paths, key=lambda x: int(x.split('/')[-1].split('_')[1]))]
-                else:
-                    assert False,f'valid_clip_num:{valid_clip_num} < chunk_number-3: {chunk_number-3}, clip_save_folder:{clip_save_folder}'
-
-            # 5次之后移除所有不合法的clip
-            for path in total_video_clip_paths:
+            valid_clip_num = 0
+            path_li = os.listdir(clip_save_folder)
+            for clip_name in path_li:
                 try:
                     VideoReader(clip_save_folder+'/'+clip_name, ctx=cpu(0), num_threads=1)
+                    valid_clip_paths.add(clip_save_folder+'/'+clip_name)
                     valid_clip_num+=1
-                except Exception as e:
-                    os.system('rm -rf '+path)
-
+                    del total_video_clip_paths[total_video_clip_paths.index(clip_save_folder+'/'+clip_name)]
+                except Exception as e: 
+                    os.system('rm -rf '+clip_save_folder+'/'+clip_name) # 移除不合法的clip
+                    
+            # assert valid_clip_num >= chunk_number-5,f'valid_clip_num:{valid_clip_num} < chunk_number-5: {chunk_number-3}, clip_save_folder:{clip_save_folder}'
+            return [file for file in sorted(valid_clip_paths, key=lambda x: int(x.split('/')[-1].split('_')[1]))]
+        
         else:
             print(clip_save_folder,'no valid clips found, cutting video:', video_path)
         
@@ -171,14 +160,8 @@ class Retrieval_Manager():
         if os.path.exists(embedding_path) and os.path.exists(clip_path):
             video_paths = pickle.load(open(clip_path,'rb'))
             total_embeddings = pickle.load(open(embedding_path,'rb'))
-        
-            invalid_num, invalid_videos=0,[]
-            for v in video_paths:
-                if not is_valid_video(v):
-                    invalid_num+=1
-                    invalid_videos.append(v)
 
-            if invalid_num<3:
+            if len(video_paths) > total_duration //self.args.clip_duration - 3:
                 return video_paths, total_embeddings
             else:
                 print(embedding_path,'exist but have not enough valid video number!!',invalid_videos[0])
